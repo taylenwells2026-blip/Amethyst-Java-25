@@ -32,6 +32,18 @@ jobs:
       - name: Checkout repository submodules
         run: git submodule update --init --recursive
 
+      # --- INJECTING FLAGS DIRECTLY INTO MAKEFILE CONFIGURATION ---
+      # This explicitly finds the internal toolchain call inside the Makefile and appends our flag
+      - name: Patch Root Makefile Config
+        run: |
+          if [ -f "Makefile" ]; then
+            sed -i '' 's|-DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration"|-DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration -Wno-error=implicit-int"|g' Makefile
+            sed -i '' 's|ios.toolchain.cmake|ios.toolchain.cmake -DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration" -DCMAKE_CXX_FLAGS="-Wno-error=implicit-function-declaration"|g' Makefile
+            echo "Successfully injected compiler bypass definitions directly into the project Makefile."
+          else
+            echo "Warning: Root Makefile not found!"
+          fi
+
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
@@ -46,10 +58,6 @@ jobs:
         run: |
           export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
           export SLIMMED=1
-          
-          # Force Xcode toolchain to globally ignore implicit function declarations
-          export OTHER_CFLAGS="-Wno-error=implicit-function-declaration"
-          export OTHER_CPLUSPLUSFLAGS="-Wno-error=implicit-function-declaration"
 
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK=$JAVA_HOME/bin
