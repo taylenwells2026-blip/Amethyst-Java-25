@@ -32,7 +32,6 @@ jobs:
       - name: Checkout repository submodules
         run: git submodule update --init --recursive
 
-      # Completely removed the CMake patch and streamlined the setup
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
@@ -48,16 +47,17 @@ jobs:
           export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
           export SLIMMED=1
           
-          # Force compiler flags directly into the gmake execution call
-          FORCE_FLAGS="CFLAGS=-Wno-error=implicit-function-declaration CXXFLAGS=-Wno-error=implicit-function-declaration"
+          # Force Xcode toolchain to globally ignore implicit function declarations
+          export OTHER_CFLAGS="-Wno-error=implicit-function-declaration"
+          export OTHER_CPLUSPLUSFLAGS="-Wno-error=implicit-function-declaration"
 
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK=$JAVA_HOME/bin $FORCE_FLAGS
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BOOTJDK=$JAVA_HOME/bin $FORCE_FLAGS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK=$JAVA_HOME/bin
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BOOTJDK=$JAVA_HOME/bin
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BOOTJDK=$JAVA_HOME/bin $FORCE_FLAGS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BOOTJDK=$JAVA_HOME/bin
           else
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK=$JAVA_HOME/bin $FORCE_FLAGS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BOOTJDK=$JAVA_HOME/bin
           fi
 
       - name: Upload regular ipa
