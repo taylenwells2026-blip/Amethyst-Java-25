@@ -47,7 +47,6 @@ jobs:
             echo 'add_compile_options("-Wno-error=implicit-function-declaration")' | cat - Natives/CMakeLists.txt > temp && mv temp Natives/CMakeLists.txt
           fi
 
-       Noah setup configuration step
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
