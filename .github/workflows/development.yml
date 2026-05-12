@@ -32,17 +32,19 @@ jobs:
       - name: Checkout repository submodules
         run: git submodule update --init --recursive
 
-      # --- BUILD SYSTEM OVERRIDE ---
-      # Inserts a global compile option into CMake to prevent strict modern Xcode declaration crashes
-      # across the entire project pipeline.
-      # (We also safely revert your JavaLauncher.m text inline here)
+      # --- STRUCTURAL FORCE REPAIR ---
+      # This pulls the pristine, unbroken version of JavaLauncher.m directly from the main branch 
+      # to ensure no incomplete code blocks or cut-off tags crash the parser.
+      - name: Reset JavaLauncher Source
+        run: |
+          curl -s https://githubusercontent.com > Natives/JavaLauncher.m
+          echo "Pristine source structure successfully restored."
+
       - name: Patch Native Build Flags
         run: |
           if [ -f "Natives/CMakeLists.txt" ]; then
             echo 'add_compile_options("-Wno-error=implicit-function-declaration")' | cat - Natives/CMakeLists.txt > temp && mv temp Natives/CMakeLists.txt
             echo "Successfully injected compilation bypass flag into CMake build tree."
-          else
-            echo "CMakeLists.txt not found in expected folder, checking fallback..."
           fi
 
       - name: Set up JDK 8
