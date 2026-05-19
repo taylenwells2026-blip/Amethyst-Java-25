@@ -1,19 +1,19 @@
-name: Build Amethyst iOS App
+name: Development Build
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to manually trigger the build from your browser
 
 jobs:
   build:
-    runs-on: macos-14 # Uses a modern macOS environment with Xcode installed
+    runs-on: macos-14 # Uses macOS with Xcode 15 tools installed
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive # Automatically pulls in any linked submodules if present
+        submodules: recursive # Automatically pulls in native components/submodules
 
     - name: Set up Xcode Version
       run: sudo xcode-select -s /Applications/Xcode_15.4.app
@@ -24,10 +24,10 @@ jobs:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-xcode-${{ hashFiles('**/*.xcodeproj') }}
 
-    - name: Build Xcode Project (Simulator/Generic iOS Device)
+    - name: Build Xcode Project
       run: |
         xcodebuild -project Amethyst.xcodeproj \
-                   -scheme Amethyst \
+                   -scheme PojavLauncher \
                    -configuration Release \
                    -sdk iphoneos \
                    CODE_SIGNING_ALLOWED=NO \
@@ -37,9 +37,9 @@ jobs:
     - name: Package App into IPA
       run: |
         mkdir -p Payload
-        # Moves the compiled app bundle into the Payload folder
-        cp -r ~/Library/Developer/Xcode/DerivedData/Amethyst-*/Build/Products/Release-iphoneos/Amethyst.app Payload/
-        # Zips it up into an IPA package
+        # Copy the built app bundle into the Payload folder
+        cp -r ~/Library/Developer/Xcode/DerivedData/Amethyst-*/Build/Products/Release-iphoneos/PojavLauncher.app Payload/
+        # Compress the Payload folder into an installer IPA file
         zip -r Amethyst.ipa Payload
 
     - name: Upload Finished IPA
