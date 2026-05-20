@@ -280,9 +280,9 @@ native: dep_mg
 
 java:
 	echo '[Amethyst v$(VERSION)] java - start'
-	# Prune any empty residual GLFW placeholders before sub-build targets run
-	if [ -d "JavaApp/build/classes" ]; then find JavaApp/build/classes -type f -empty -delete; fi
 	$(MAKE) -C JavaApp -j$(JOBS) BOOTJDK=$(BOOTJDK)
+	# Safely prune empty GLFW stub classes right after Java compilation finishes
+	-if [ -d "JavaApp/build/classes" ]; then find JavaApp/build/classes -type f -empty -delete 2>/dev/null || true; fi
 	echo '[Amethyst v$(VERSION)] java - end'
 
 jre: native
