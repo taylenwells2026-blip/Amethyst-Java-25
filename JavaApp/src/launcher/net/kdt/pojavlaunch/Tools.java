@@ -60,6 +60,10 @@ public final class Tools {
         // FIX FOR LWJGL / SPVC LINKING FAILURE ON iOS:
         // Force lookups for libspirv-cross.dylib to match your native compiled binary name
         System.setProperty("org.lwjgl.util.spvc.libname", "libspirv-cross-c-shared.0.dylib");
+
+        // FIX FOR LWJGL / OPENAL LINKING FAILURE ON iOS:
+        // Force lookup for libopenal.dylib directly to match your flat native library path
+        System.setProperty("org.lwjgl.openal.libname", "libopenal.dylib");
         // --- END AMETHYST UPSTREAM LWJGL 3.4.1 COMPLIANCE OVERRIDE ---
 
         String[] launchArgs = getMinecraftArgs(profile, versionInfo);
