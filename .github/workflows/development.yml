@@ -36,6 +36,12 @@ jobs:
       run: |
         JDK_BASE_PATH="${{ steps.setup-java.outputs.path }}"
         export PATH="$JDK_BASE_PATH/bin:$PATH"
+        
+        # Explicit clean-up step to destroy broken or empty compiler class files
+        make clean JAVA_HOME="$JDK_BASE_PATH" BOOTJDK="$JDK_BASE_PATH/bin" || true
+        rm -rf build
+        
+        # Fresh compilation run
         make JAVA_HOME="$JDK_BASE_PATH" BOOTJDK="$JDK_BASE_PATH/bin"
 
     - name: Cache Build Dependencies
