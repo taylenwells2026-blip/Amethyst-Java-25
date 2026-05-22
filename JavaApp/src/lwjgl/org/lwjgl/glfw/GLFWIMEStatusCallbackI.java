@@ -6,7 +6,6 @@ package org.lwjgl.glfw;
 
 import org.lwjgl.system.*;
 
-@FunctionalInterface
 public interface GLFWIMEStatusCallbackI extends CallbackI {
     void invoke(long window, boolean focused);
 }
