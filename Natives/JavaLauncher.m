@@ -233,7 +233,27 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     }
     margv[++margc] = "-Xms128M";
     margv[++margc] = [NSString stringWithFormat:@"-Xmx%dM", allocmem].UTF8String;
-    margv[++margc] = [NSString stringWithFormat:@"-Djava.library.path=%@/Frameworks", NSBundle.mainBundle.bundlePath].UTF8String;
+    // Detect LWJGL version early to set correct library path
+    BOOL useLWJGL33 = NO;
+    if ([launchTarget isKindOfClass:NSDictionary.class]) {
+        NSArray *libraries = launchTarget[@"libraries"];
+        for (NSDictionary *lib in libraries) {
+            NSString *name = lib[@"name"];
+            if (name && [name hasPrefix:@"org.lwjgl:lwjgl:"]) {
+                NSString *ver = [[name componentsSeparatedByString:@":"] lastObject];
+                NSArray *parts = [ver componentsSeparatedByString:@"."];
+                if (parts.count >= 2 && [[parts objectAtIndex:1] intValue] < 4) {
+                    useLWJGL33 = YES;
+                }
+                break;
+            }
+        }
+    }
+    NSString *frameworksPath = [NSString stringWithFormat:@"%@/Frameworks", NSBundle.mainBundle.bundlePath];
+    NSString *lwjglFrameworksPath = useLWJGL33
+        ? [frameworksPath stringByAppendingPathComponent:@"lwjgl33"]
+        : frameworksPath;
+    margv[++margc] = [NSString stringWithFormat:@"-Djava.library.path=%@:%@", lwjglFrameworksPath, frameworksPath].UTF8String;
     margv[++margc] = [NSString stringWithFormat:@"-Duser.dir=%@", gameDir].UTF8String;
     margv[++margc] = [NSString stringWithFormat:@"-Duser.home=%s", getenv("POJAV_HOME")].UTF8String;
     margv[++margc] = [NSString stringWithFormat:@"-Duser.timezone=%@", NSTimeZone.localTimeZone.name].UTF8String;
@@ -352,29 +372,11 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     init_loadCustomJvmFlags(&margc, (const char **)margv);
     NSLog(@"[Init] Found JLI lib");
 
-    // Detect LWJGL version from version info to pick the right jar (3.4.1 vs 3.3.3)
-    // lwjgl.jar = 3.4.1 (for 26.x snapshots), lwjgl33.jar = 3.3.3 (for 1.21.x and older)
-    NSString *lwjglJar = [NSString stringWithFormat:@"%@/lwjgl.jar", librariesPath];
-    if ([launchTarget isKindOfClass:NSDictionary.class]) {
-        NSArray *libraries = launchTarget[@"libraries"];
-        for (NSDictionary *lib in libraries) {
-            NSString *name = lib[@"name"];
-            if (name && [name hasPrefix:@"org.lwjgl:lwjgl:"]) {
-                NSString *ver = [[name componentsSeparatedByString:@":"] lastObject];
-                NSArray *parts = [ver componentsSeparatedByString:@"."];
-                if (parts.count >= 2) {
-                    int minor = [[parts objectAtIndex:1] intValue];
-                    if (minor < 4) {
-                        lwjglJar = [NSString stringWithFormat:@"%@/lwjgl33.jar", librariesPath];
-                        NSLog(@"[JavaLauncher] Using LWJGL 3.3.x jar for version %@", ver);
-                    } else {
-                        NSLog(@"[JavaLauncher] Using LWJGL 3.4.x jar for version %@", ver);
-                    }
-                }
-                break;
-            }
-        }
-    }
+    // Pick correct LWJGL jar based on earlier version detection
+    NSString *lwjglJar = useLWJGL33
+        ? [NSString stringWithFormat:@"%@/lwjgl33.jar", librariesPath]
+        : [NSString stringWithFormat:@"%@/lwjgl.jar", librariesPath];
+    NSLog(@"[JavaLauncher] Using LWJGL %@ jar", useLWJGL33 ? @"3.3.x" : @"3.4.x");
     // Build classpath with all jars from libs/ except lwjgl*.jar, then add correct lwjgl jar
     NSMutableString *classpathBuilder = [NSMutableString string];
     NSArray *libFiles = [fm contentsOfDirectoryAtPath:librariesPath error:nil];
