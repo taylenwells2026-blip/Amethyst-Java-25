@@ -1,16 +1,20 @@
-#Changes that have been made. 
-updated lwjgl 3.3.3 to 3.4.1 from versions 26.1 onwards
-added lwjgl 3.3.3 for versions 1.21.11 and under
-
-updated moltenvk, and every other dylib.
-added java 25 support.
-
-#Changes potentially coming in the future.
-fix open gl crashing on 26.1-26.2
-make the java 25 implementation less "hacky"
+# Changes made
+* updated lwjgl 3.3.3 to 3.4.1 from versions 26.1 onwards
 
 
-#NOTE
+* added lwjgl 3.3.3 for versions 1.21.11 and under
+
+* updated moltenvk, and every other dylib.
+
+* added java 25 support.
+
+# changes potentially coming in the future
+* fix open gl crashing on 26.1-26.2
+
+* make the java 25 implementation less "hacky"
+
+
+# NOTE
 if you do use this build and want to use the new
 snapshots you must change the rendering backend 
 to vulkan. open gl currently crashes from 26.1-26.2
