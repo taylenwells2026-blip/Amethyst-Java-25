@@ -1,6 +1,5 @@
 package org.lwjgl.glfw;
 import java.util.*;
-
 public class CallbackBridge {
     public static final int CLIPBOARD_COPY = 2000;
     public static final int CLIPBOARD_PASTE = 2001;
@@ -19,26 +18,15 @@ public class CallbackBridge {
     
     public static final boolean INPUT_DEBUG_ENABLED;
     
-    // TODO send grab state event to Android
-    
     static {
         INPUT_DEBUG_ENABLED = Boolean.parseBoolean(System.getProperty("glfwstub.debugInput", "false"));
-
-        
-/*
-        if (isDebugEnabled) {
-            //try {
-                //debugEventStream = new PrintStream(new File(System.getProperty("user.dir"), "glfwstub_inputeventlog.txt"));
-		    debugEventStream = System.out;
-            //} catch (FileNotFoundException e) {
-            //    e.printStackTrace();
-            //}
-        }
-	
-	    //Quick and dirty: debul all key inputs to System.out
-*/
     }
 
     public static native String nativeClipboard(int action, byte[] copy);
-    public static native void nativeSetGrabbing(boolean grab);
+    public static native void nativeSetGrabbing(boolean grab, float xset, float yset);
+
+    // Convenience overload matching older call sites
+    public static void nativeSetGrabbing(boolean grab) {
+        nativeSetGrabbing(grab, 0f, 0f);
+    }
 }
