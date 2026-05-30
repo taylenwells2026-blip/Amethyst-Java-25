@@ -67,5 +67,5 @@ jobs:
     - name: Upload Finished IPA
       uses: actions/upload-artifact@v4
       with:
-        name: Amethyst-iOS-Build
+        name: Amethyst
         path: Amethyst.ipa
