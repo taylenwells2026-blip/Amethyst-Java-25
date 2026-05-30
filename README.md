@@ -8,10 +8,11 @@
 
 * added java 25 support.
 
+
 # changes potentially coming in the future
 * fix open gl crashing on 26.1-26.2
 
-* make the java 25 implementation less "hacky"
+* ~~make the java 25 implementation less "hacky"~~
 
 
 # NOTE
