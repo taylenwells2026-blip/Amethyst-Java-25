@@ -18,7 +18,7 @@ jobs:
     - name: Set up Xcode Version
       run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
-    - name: Set up JDK 8 (Azul Zulu for Apple Silicon)
+    - name: Set up JDK 8
       uses: actions/setup-java@v4
       id: setup-java
       with:
@@ -31,7 +31,7 @@ jobs:
         sudo mkdir -p /usr/local/bin
         sudo ln -s /opt/homebrew/bin/gmake /usr/local/bin/gmake
 
-    - name: Run Project Makefile
+    - name: Run Makefile
       run: |
         JDK_BASE_PATH="${{ steps.setup-java.outputs.path }}"
         export PATH="$JDK_BASE_PATH/bin:$PATH"
