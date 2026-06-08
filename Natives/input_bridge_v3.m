@@ -420,12 +420,20 @@ JNIEXPORT jboolean JNICALL Java_org_lwjgl_glfw_CallbackBridge_nativeIsGrabbing(J
 void CallbackBridge_nativeSetInputReady(BOOL inputReady) {
     isInputReady = inputReady;
     if (inputReady) {
+        if (showingWindow == 0 || showingWindow == NULL) {
+            static BOOL warnedNullWindow = NO; 
+            if (!warnedNullWindow) {
+                NSLog(@"[Amethyst] Prevented SIGSEGV: showingWindow is null during early display init.");
+                warnedNullWindow = YES;
+            }
+            return; 
+        }
         if (GLFW_invoke_FramebufferSize) {
             hackFix18LWJGL(GLFW_invoke_FramebufferSize);
             GLFW_invoke_FramebufferSize((void*) showingWindow, windowWidth, windowHeight);
         }
         if (GLFW_invoke_WindowSize) {
-            GLFW_invoke_FramebufferSize((void*) showingWindow, windowWidth, windowHeight);
+            GLFW_invoke_WindowSize((void*) showingWindow, windowWidth, windowHeight);
         }
     }
 }
