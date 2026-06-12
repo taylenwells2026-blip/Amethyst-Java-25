@@ -20,7 +20,7 @@
         @"video": @{ // Video & Audio
             @"renderer": @"auto",
             @"resolution": @(100),
-            @"max_framerate": NO,
+            @"max_framerate": @NO,
             @"performance_hud": @NO,
             @"fullscreen_airplay": @YES,
             @"silence_other_audio": @NO,
