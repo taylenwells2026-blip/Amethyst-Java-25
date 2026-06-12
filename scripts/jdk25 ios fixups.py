@@ -843,6 +843,20 @@ patch('src/hotspot/os/bsd/os_bsd.cpp', [
 ])
 
 
+# 37. nmethod.hpp set_load_reported — the split-nmethod-flag-bitfields fixup
+#     above converts _load_reported from a :1 bitfield to uint8_t, but if
+#     that fixup's old text didn't match exactly, _load_reported stays a
+#     bitfield and mirror_w_set() fails with "address of bit-field requested".
+#     Patch set_load_reported() to go through mirror_w(this) instead of
+#     taking &_load_reported directly, which works whether the field is a
+#     bitfield or a plain uint8_t.
+patch('src/hotspot/share/code/nmethod.hpp', [
+    ("set-load-reported-no-bitfield-addr",
+     "  void  set_load_reported()                       { mirror_w_set(_load_reported) = true; }",
+     "  void  set_load_reported()                       { mirror_w(this)->_load_reported = true; }"),
+])
+
+
 print(f"\nfixups: ok={ok} skip={skip} warn={warn}")
 # Don't exit non-zero on WARN — apply_rejs.py + patch -F 100 may have already
 # applied the same change in a slightly different form (e.g. base patch's
