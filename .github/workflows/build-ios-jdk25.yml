@@ -145,6 +145,28 @@ jobs:
               echo "[sed-fix] patched set_load_reported in nmethod.hpp"
               grep -n "load_reported" "$NMETHOD_HPP" | head -5
             fi
+
+            # Hard fix for memMapPrinter_macosx.cpp — the Python fixup wraps
+            # it in a !TARGET_OS_IPHONE guard but the old text didn't match.
+            # mach_vm.h is explicitly unsupported on iOS SDK so this file must
+            # be excluded entirely, with an empty stub so the NMT linker symbol
+            # pd_print_all_mappings still resolves.
+            MEMMAPPRINTER="src/hotspot/os/bsd/memMapPrinter_macosx.cpp"
+            if [ -f "$MEMMAPPRINTER" ] && ! grep -q "TARGET_OS_IPHONE" "$MEMMAPPRINTER"; then
+              {
+                echo '#include <TargetConditionals.h>'
+                echo '#if !TARGET_OS_IPHONE'
+                cat "$MEMMAPPRINTER"
+                echo '#endif // !TARGET_OS_IPHONE'
+                echo ''
+                echo '#if TARGET_OS_IPHONE'
+                echo '#include "nmt/memMapPrinter.hpp"'
+                echo 'void MemMapPrinter::pd_print_all_mappings(const MappingPrintSession&) {}'
+                echo '#endif'
+              } > /tmp/mmp_patch.cpp
+              cp /tmp/mmp_patch.cpp "$MEMMAPPRINTER"
+              echo "[sed-fix] patched memMapPrinter_macosx.cpp with iOS guard + stub"
+            fi
           fi
 
           '''
