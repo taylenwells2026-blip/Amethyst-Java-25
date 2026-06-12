@@ -843,18 +843,39 @@ patch('src/hotspot/os/bsd/os_bsd.cpp', [
 ])
 
 
-# 37. nmethod.hpp set_load_reported — the split-nmethod-flag-bitfields fixup
-#     above converts _load_reported from a :1 bitfield to uint8_t, but if
-#     that fixup's old text didn't match exactly, _load_reported stays a
-#     bitfield and mirror_w_set() fails with "address of bit-field requested".
-#     Patch set_load_reported() to go through mirror_w(this) instead of
-#     taking &_load_reported directly, which works whether the field is a
-#     bitfield or a plain uint8_t.
+# 37. nmethod.hpp set_load_reported — mirror_w_set takes the address of
+#     _load_reported which is still a :1 bitfield (split-nmethod-flag-bitfields
+#     didn't apply because the old text didn't match exactly). C++ forbids
+#     taking the address of a bitfield so the build fails with
+#     "address of bit-field requested". Fix: replace the entire
+#     set_load_reported() body with a direct write through mirror_w(this)
+#     which bypasses the address-of-bitfield restriction entirely.
+#     Try multiple spacing variants since the exact whitespace depends on
+#     which version of the base patch applied.
 patch('src/hotspot/share/code/nmethod.hpp', [
-    ("set-load-reported-no-bitfield-addr",
+    ("set-load-reported-via-mirror-w-this-v1",
      "  void  set_load_reported()                       { mirror_w_set(_load_reported) = true; }",
      "  void  set_load_reported()                       { mirror_w(this)->_load_reported = true; }"),
+    ("set-load-reported-via-mirror-w-this-v2",
+     "  void set_load_reported() { mirror_w_set(_load_reported) = true; }",
+     "  void set_load_reported() { mirror_w(this)->_load_reported = true; }"),
+    ("set-load-reported-via-mirror-w-this-v3",
+     "  void  set_load_reported()  { mirror_w_set(_load_reported) = true; }",
+     "  void  set_load_reported()  { mirror_w(this)->_load_reported = true; }"),
 ])
+
+# 37b. If _load_reported is still a bitfield, also patch the declaration
+#      site directly to make it a plain uint8_t so mirror_w_set works
+#      everywhere else that references it. Try the most likely forms.
+patch('src/hotspot/share/code/nmethod.hpp', [
+    ("load-reported-bitfield-to-uint8-v1",
+     "          _load_reported:1;            // used by jvmti to track if an event has been posted for this nmethod",
+     "          _load_reported;              // used by jvmti to track if an event has been posted for this nmethod
+  uint8_t _load_reported_pad[0]; // was :1 bitfield, now uint8_t for mirror_w_set compat"),
+    ("load-reported-bitfield-to-uint8-v2",
+     "          _load_reported:1;",
+     "          _load_reported;"),
+], replace_all=True)
 
 
 print(f"\nfixups: ok={ok} skip={skip} warn={warn}")
