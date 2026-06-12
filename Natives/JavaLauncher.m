@@ -292,8 +292,6 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     // On iOS 26, use mirror mapped JIT by default
     if (@available(iOS 26.0, *)) {
         margv[++margc] = "-XX:+MirrorMappedCodeCache";
-        margv[++margc] = "-XX:+UnlockDiagnosticVMOptions";
-        margv[++margc] = "-XX:+TXMWorkaroundActive";
     }
 
     // Disable Forge 1.16.x early progress window
