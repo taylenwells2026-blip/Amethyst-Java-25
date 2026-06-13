@@ -144,21 +144,58 @@ jobs:
 
             # Fix 4: libjli links ApplicationServices + Cocoa which don't exist
             # on iOS. Replace with Foundation only.
-            CORELIBSDIR="make/modules/java.base/lib/CoreLibraries.gmk"
-            if [ -f "$CORELIBSDIR" ]; then
-              perl -i -0pe 's/-framework ApplicationServices\s*\\\s*\n\s*-framework Cocoa\s*\\/-framework Foundation \\/g' "$CORELIBSDIR" || true
-              echo "[sed-fix] patched CoreLibraries.gmk libjli frameworks"
-              grep -n "framework" "$CORELIBSDIR" | grep -i "applic\|cocoa\|foundation" | head -10
-            fi
+            # Fix 5: libnet missing CFNetwork framework.
+            # Both use Python for reliable multiline text replacement.
+            python3 << 'INNEREOF'
+import re
+from pathlib import Path
 
-            # Fix 5: libnet missing CFNetwork framework - CFNetworkCopyProxiesForURL
-            # and friends are in CFNetwork, not CoreServices.
-            JAVABASE_LIB="make/modules/java.base/Lib.gmk"
-            if [ -f "$JAVABASE_LIB" ]; then
-              sed -i '' 's|-framework CoreServices, \\|-framework CoreServices \\\n        -framework CFNetwork, \\|g' "$JAVABASE_LIB" || true
-              echo "[sed-fix] patched Lib.gmk libnet CFNetwork"
-              grep -n "CFNetwork\|CoreServices" "$JAVABASE_LIB" | head -10
-            fi
+# Fix 4 - CoreLibraries.gmk
+p = Path('make/modules/java.base/lib/CoreLibraries.gmk')
+if p.exists():
+    s = p.read_text()
+    # Replace ApplicationServices + Cocoa block with Foundation only
+    s_new = re.sub(
+        r'-framework ApplicationServices\s*\\\s*\n\s*-framework Cocoa\s*\\',
+        '-framework Foundation \\\\',
+        s
+    )
+    if s_new != s:
+        p.write_text(s_new)
+        print('[sed-fix] patched CoreLibraries.gmk libjli frameworks')
+    else:
+        print('[sed-fix] WARN: CoreLibraries.gmk pattern not found, trying alternate')
+        s_new = s.replace(
+            '    -framework ApplicationServices \\\n        -framework Cocoa \\',
+            '    -framework Foundation \\'
+        )
+        if s_new != s:
+            p.write_text(s_new)
+            print('[sed-fix] patched CoreLibraries.gmk (alternate match)')
+        else:
+            print('[sed-fix] WARN: CoreLibraries.gmk no match found')
+else:
+    print('[sed-fix] WARN: CoreLibraries.gmk not found')
+
+# Fix 5 - Lib.gmk CFNetwork
+p = Path('make/modules/java.base/Lib.gmk')
+if p.exists():
+    s = p.read_text()
+    if 'CFNetwork' not in s:
+        s_new = s.replace(
+            '    -framework CoreServices, \\',
+            '    -framework CoreServices \\\n        -framework CFNetwork, \\'
+        )
+        if s_new != s:
+            p.write_text(s_new)
+            print('[sed-fix] patched Lib.gmk libnet CFNetwork')
+        else:
+            print('[sed-fix] WARN: Lib.gmk CoreServices pattern not found')
+    else:
+        print('[sed-fix] Lib.gmk CFNetwork already present')
+else:
+    print('[sed-fix] WARN: Lib.gmk not found')
+INNEREOF
           fi
 
           '''
