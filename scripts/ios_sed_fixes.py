@@ -303,3 +303,48 @@ if p.exists():
         print('[ios_sed_fixes] fix10: libsaproc already disabled')
 else:
     print('[ios_sed_fixes] fix10: WARN jdk.hotspot.agent/Lib.gmk not found')
+
+
+# Fix 11: jdk.jpackage/Lib.gmk - jpackageapplauncher links Cocoa which
+# doesn't exist on iOS. Replace with Foundation.
+p = ROOT / 'make/modules/jdk.jpackage/Lib.gmk'
+if p.exists():
+    s = p.read_text()
+    original = s
+    s = re.sub(r'-framework Cocoa(\s)', r'-framework Foundation\1', s)
+    s = re.sub(r'-framework Cocoa,', r'-framework Foundation,', s)
+    s = re.sub(r'-framework Cocoa\\', r'-framework Foundation\\', s)
+    if s != original:
+        p.write_text(s)
+        print('[ios_sed_fixes] fix11: patched jdk.jpackage/Lib.gmk Cocoa -> Foundation')
+        show(p, r'framework.*(Cocoa|Foundation)')
+    else:
+        print('[ios_sed_fixes] fix11: jdk.jpackage/Lib.gmk already patched or no Cocoa found')
+        show(p, r'Cocoa|Foundation')
+else:
+    print('[ios_sed_fixes] fix11: WARN jdk.jpackage/Lib.gmk not found')
+
+
+# Fix 12: ClientLibraries.gmk - libfontmanager depends on libawt_lwawt
+# which is skipped on iOS. Switch to libawt_headless instead.
+p = ROOT / 'make/modules/java.desktop/lib/ClientLibraries.gmk'
+if p.exists():
+    s = p.read_text()
+    if 'libawt_headless' not in s:
+        original = s
+        s = s.replace(
+            'JDK_LIBS_macosx := libawt_lwawt,',
+            'JDK_LIBS_macosx := libawt_headless,'
+        )
+        if s != original:
+            p.write_text(s)
+            print('[ios_sed_fixes] fix12: patched ClientLibraries.gmk libfontmanager -> libawt_headless')
+        else:
+            print('[ios_sed_fixes] fix12: WARN libawt_lwawt pattern not found in ClientLibraries.gmk')
+            for line in s.splitlines():
+                if 'libawt' in line:
+                    print(' ', repr(line))
+    else:
+        print('[ios_sed_fixes] fix12: ClientLibraries.gmk already uses libawt_headless')
+else:
+    print('[ios_sed_fixes] fix12: WARN ClientLibraries.gmk not found')
