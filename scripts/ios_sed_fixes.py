@@ -199,3 +199,35 @@ if p.exists():
         print('[ios_sed_fixes] fix7: AwtLibraries.gmk already patched')
 else:
     print('[ios_sed_fixes] fix7: WARN AwtLibraries.gmk not found')
+
+
+# Fix 8: ClientLibraries.gmk - guard BUILD_LIBOSXUI with macosx_NOTIOS.
+# Sources live in src/java.desktop/macosx which gets moved out on iOS,
+# causing "No sources found for BUILD_LIBOSXUI".
+p = ROOT / 'make/modules/java.desktop/lib/ClientLibraries.gmk'
+if p.exists():
+    s = p.read_text()
+    if 'libosxui disabled for iOS' not in s:
+        original = s
+        old = '$(eval $(call SetupJdkLibrary, BUILD_LIBOSXUI,'
+        if old in s:
+            idx = s.index(old)
+            targets_marker = 'TARGETS += $(BUILD_LIBOSXUI)'
+            targets_idx = s.index(targets_marker, idx)
+            end_idx = targets_idx + len(targets_marker)
+            block = s[idx:end_idx]
+            new_block = (
+                '# libosxui disabled for iOS - sources moved to macosx_NOTIOS\n'
+                'ifeq ($(call isTargetOs, macosx_NOTIOS), true)\n'
+                + block + '\n'
+                'endif'
+            )
+            s = s[:idx] + new_block + s[end_idx:]
+            p.write_text(s)
+            print('[ios_sed_fixes] fix8: patched ClientLibraries.gmk BUILD_LIBOSXUI guard')
+        else:
+            print('[ios_sed_fixes] fix8: WARN BUILD_LIBOSXUI block not found in ClientLibraries.gmk')
+    else:
+        print('[ios_sed_fixes] fix8: ClientLibraries.gmk already patched')
+else:
+    print('[ios_sed_fixes] fix8: WARN ClientLibraries.gmk not found')
