@@ -143,3 +143,59 @@ if p.exists():
         print('[ios_sed_fixes] fix5: Lib.gmk CFNetwork already present')
 else:
     print('[ios_sed_fixes] fix5: WARN Lib.gmk not found')
+
+
+# Fix 6: java.instrument/Lib.gmk - ApplicationServices + Cocoa don't exist
+# on iOS. Replace with Foundation only.
+p = ROOT / 'make/modules/java.instrument/Lib.gmk'
+if p.exists():
+    s = p.read_text()
+    original = s
+    s = re.sub(
+        r'[ \t]*-framework ApplicationServices[ \t]*\\\n[ \t]*-framework Cocoa[ \t]*\\',
+        '        -framework Foundation \\\\',
+        s
+    )
+    s = re.sub(r'[ \t]*-framework ApplicationServices[ \t]*\\\n', '', s)
+    s = re.sub(r'[ \t]*-framework Cocoa[ \t]*\\\n', '', s)
+    if s != original:
+        p.write_text(s)
+        print('[ios_sed_fixes] fix6: patched java.instrument/Lib.gmk')
+        show(p, r'framework')
+    else:
+        print('[ios_sed_fixes] fix6: java.instrument/Lib.gmk already patched or no match')
+        show(p, r'ApplicationServices|Cocoa')
+else:
+    print('[ios_sed_fixes] fix6: WARN java.instrument/Lib.gmk not found')
+
+
+# Fix 7: AwtLibraries.gmk - guard BUILD_LIBJAWT with macosx_NOTIOS so iOS
+# skips it entirely. The sources live in src/java.desktop/macosx which gets
+# moved out so the build errors with "No sources found for BUILD_LIBJAWT".
+p = ROOT / 'make/modules/java.desktop/lib/AwtLibraries.gmk'
+if p.exists():
+    s = p.read_text()
+    if 'libjawt disabled for iOS' not in s:
+        original = s
+        old = '$(eval $(call SetupJdkLibrary, BUILD_LIBJAWT,'
+        if old in s:
+            idx = s.index(old)
+            targets_marker = 'TARGETS += $(BUILD_LIBJAWT)'
+            targets_idx = s.index(targets_marker, idx)
+            end_idx = targets_idx + len(targets_marker)
+            block = s[idx:end_idx]
+            new_block = (
+                '# libjawt disabled for iOS - sources moved to macosx_NOTIOS\n'
+                'ifeq ($(call isTargetOs, macosx_NOTIOS), true)\n'
+                + block + '\n'
+                'endif'
+            )
+            s = s[:idx] + new_block + s[end_idx:]
+            p.write_text(s)
+            print('[ios_sed_fixes] fix7: patched AwtLibraries.gmk BUILD_LIBJAWT guard')
+        else:
+            print('[ios_sed_fixes] fix7: WARN BUILD_LIBJAWT block not found')
+    else:
+        print('[ios_sed_fixes] fix7: AwtLibraries.gmk already patched')
+else:
+    print('[ios_sed_fixes] fix7: WARN AwtLibraries.gmk not found')
