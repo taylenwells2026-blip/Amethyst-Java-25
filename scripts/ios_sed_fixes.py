@@ -364,3 +364,49 @@ if p.exists():
         print('[ios_sed_fixes] fix12: ClientLibraries.gmk already uses libawt_headless')
 else:
     print('[ios_sed_fixes] fix12: WARN ClientLibraries.gmk not found')
+
+
+# Fix 13: AwtLibraries.gmk - libawt_headless is guarded with:
+#   ifeq ($(call isTargetOs, windows macosx), false)
+# which means it does NOT build on macOS. Since we're building with a macOS
+# toolchain targeting iOS, libawt_headless never gets built, so libfontmanager
+# can't depend on it. Change the guard to macosx_NOTIOS so iOS builds it.
+p = ROOT / 'make/modules/java.desktop/lib/AwtLibraries.gmk'
+if p.exists():
+    s = p.read_text()
+    original = s
+    patterns = [
+        ('ifeq ($(call isTargetOs, windows macosx), false)',
+         'ifeq ($(call isTargetOs, windows macosx_NOTIOS), false)'),
+        ('ifeq ($(call isTargetOs, windows macosx_NOTIOS), false)', None),  # already patched
+    ]
+    patched = False
+    for old, new in patterns:
+        if new is None:
+            print('[ios_sed_fixes] fix13: libawt_headless guard already patched')
+            patched = True
+            break
+        if old in s:
+            s = s.replace(old, new)
+            patched = True
+            break
+    if not patched:
+        # Try regex for whitespace variations
+        s2 = re.sub(
+            r'ifeq \(\$\(call isTargetOs, windows macosx\), false\)',
+            'ifeq ($(call isTargetOs, windows macosx_NOTIOS), false)',
+            s
+        )
+        if s2 != s:
+            s = s2
+            patched = True
+    if s != original:
+        p.write_text(s)
+        print('[ios_sed_fixes] fix13: patched AwtLibraries.gmk libawt_headless guard')
+    elif not patched:
+        print('[ios_sed_fixes] fix13: WARN libawt_headless guard not found')
+        for line in s.splitlines():
+            if 'libawt_headless' in line or ('windows' in line and 'macosx' in line):
+                print(' ', repr(line))
+else:
+    print('[ios_sed_fixes] fix13: WARN AwtLibraries.gmk not found')
