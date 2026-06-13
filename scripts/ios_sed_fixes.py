@@ -332,15 +332,31 @@ if p.exists():
     s = p.read_text()
     if 'libawt_headless' not in s:
         original = s
-        s = s.replace(
-            'JDK_LIBS_macosx := libawt_lwawt,',
-            'JDK_LIBS_macosx := libawt_headless,'
-        )
+        # Try all known spacing/trailing variants
+        patterns = [
+            ('JDK_LIBS_macosx := libawt_lwawt, \\',
+             'JDK_LIBS_macosx := libawt_headless, \\'),
+            ('JDK_LIBS_macosx := libawt_lwawt,',
+             'JDK_LIBS_macosx := libawt_headless,'),
+            ('JDK_LIBS_macosx := libawt_lwawt \\',
+             'JDK_LIBS_macosx := libawt_headless \\'),
+        ]
+        for old, new in patterns:
+            if old in s:
+                s = s.replace(old, new)
+                break
+        # Also try regex for any whitespace variation
+        if s == original:
+            s = re.sub(
+                r'(JDK_LIBS_macosx\s*:=\s*)libawt_lwawt',
+                r'\1libawt_headless',
+                s
+            )
         if s != original:
             p.write_text(s)
             print('[ios_sed_fixes] fix12: patched ClientLibraries.gmk libfontmanager -> libawt_headless')
         else:
-            print('[ios_sed_fixes] fix12: WARN libawt_lwawt pattern not found in ClientLibraries.gmk')
+            print('[ios_sed_fixes] fix12: WARN libawt_lwawt not found, printing libawt lines:')
             for line in s.splitlines():
                 if 'libawt' in line:
                     print(' ', repr(line))
