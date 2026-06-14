@@ -426,3 +426,35 @@ if p.exists():
                 print(' ', repr(line))
 else:
     print('[ios_sed_fixes] fix13: WARN AwtLibraries.gmk not found')
+
+
+# Fix 14: AwtLibraries.gmk - libawt LIBS_macosx links ApplicationServices,
+# AudioToolbox, Cocoa, JavaRuntimeSupport, Metal, OpenGL — none exist on iOS.
+# Replace the entire LIBS_macosx block with an empty one.
+# Also fix libawt_lwawt's LIBS_macosx which also has Cocoa.
+p = ROOT / 'make/modules/java.desktop/lib/AwtLibraries.gmk'
+if p.exists():
+    s = p.read_text()
+    original = s
+
+    # Remove all ApplicationServices framework references from LIBS_macosx lines
+    s = re.sub(r'[ \t]*-framework ApplicationServices[ \t]*\\\n', '', s)
+    # Remove all JavaRuntimeSupport framework references
+    s = re.sub(r'[ \t]*-framework JavaRuntimeSupport[ \t]*\\\n', '', s)
+    # Remove all Metal framework references
+    s = re.sub(r'[ \t]*-framework Metal[ \t]*\\\n', '', s)
+    # Remove all OpenGL framework references
+    s = re.sub(r'[ \t]*-framework OpenGL[ \t]*\\\n', '', s)
+    # Remove all Cocoa framework references (replace with Foundation)
+    s = re.sub(r'(-framework )Cocoa', r'\1Foundation', s)
+
+    if s != original:
+        p.write_text(s)
+        print('[ios_sed_fixes] fix14: patched AwtLibraries.gmk framework references')
+        for line in s.splitlines():
+            if any(f in line for f in ['ApplicationServices', 'JavaRuntimeSupport', 'Metal', 'OpenGL', 'Cocoa', 'Foundation']):
+                print(' ', line.strip())
+    else:
+        print('[ios_sed_fixes] fix14: AwtLibraries.gmk already patched or no matches')
+else:
+    print('[ios_sed_fixes] fix14: WARN AwtLibraries.gmk not found')
