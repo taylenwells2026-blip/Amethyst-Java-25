@@ -428,31 +428,40 @@ else:
     print('[ios_sed_fixes] fix13: WARN AwtLibraries.gmk not found')
 
 
-# Fix 14: AwtLibraries.gmk - libawt LIBS_macosx links ApplicationServices,
-# AudioToolbox, Cocoa, JavaRuntimeSupport, Metal, OpenGL — none exist on iOS.
-# Replace the entire LIBS_macosx block with an empty one.
-# Also fix libawt_lwawt's LIBS_macosx which also has Cocoa.
+# Fix 14: AwtLibraries.gmk - libawt LIBS_macosx links macOS-only frameworks
+# (ApplicationServices, AudioToolbox, Cocoa, JavaRuntimeSupport, Metal, OpenGL)
+# that don't exist on iOS. The cleanest fix is to rename LIBS_macosx to
+# LIBS_macosx_NOTIOS so iOS gets an empty link list. Also handle any remaining
+# standalone framework references that individual regex removals might miss.
 p = ROOT / 'make/modules/java.desktop/lib/AwtLibraries.gmk'
 if p.exists():
     s = p.read_text()
     original = s
 
-    # Remove all ApplicationServices framework references from LIBS_macosx lines
-    s = re.sub(r'[ \t]*-framework ApplicationServices[ \t]*\\\n', '', s)
-    # Remove all JavaRuntimeSupport framework references
-    s = re.sub(r'[ \t]*-framework JavaRuntimeSupport[ \t]*\\\n', '', s)
-    # Remove all Metal framework references
-    s = re.sub(r'[ \t]*-framework Metal[ \t]*\\\n', '', s)
-    # Remove all OpenGL framework references
-    s = re.sub(r'[ \t]*-framework OpenGL[ \t]*\\\n', '', s)
-    # Remove all Cocoa framework references (replace with Foundation)
+    # Strategy 1: rename LIBS_macosx to LIBS_macosx_NOTIOS in libawt block
+    # This is idempotent and covers all frameworks in one shot.
+    # Only rename the specific block that has the problematic frameworks.
+    s = re.sub(
+        r'(    LIBS_macosx := \\\n'
+        r'(?:[ \t]*-framework (?:ApplicationServices|AudioToolbox|Cocoa|JavaRuntimeSupport|Metal|OpenGL)[, \t]*\\\n)+)',
+        lambda m: m.group(0).replace('    LIBS_macosx := \\\n', '    LIBS_macosx_NOTIOS := \\\n', 1),
+        s
+    )
+
+    # Strategy 2: for any remaining individual framework lines that aren't
+    # covered by the block rename, remove them directly.
+    for fw in ['ApplicationServices', 'JavaRuntimeSupport', 'Metal', 'OpenGL']:
+        # Match with optional comma before the trailing backslash
+        s = re.sub(r'[ \t]*-framework ' + fw + r'[, \t]*\\\n', '', s)
+
+    # Replace remaining Cocoa with Foundation (don't remove — need something)
     s = re.sub(r'(-framework )Cocoa', r'\1Foundation', s)
 
     if s != original:
         p.write_text(s)
         print('[ios_sed_fixes] fix14: patched AwtLibraries.gmk framework references')
         for line in s.splitlines():
-            if any(f in line for f in ['ApplicationServices', 'JavaRuntimeSupport', 'Metal', 'OpenGL', 'Cocoa', 'Foundation']):
+            if any(f in line for f in ['ApplicationServices', 'JavaRuntimeSupport', 'Metal', 'OpenGL', 'Cocoa', 'LIBS_macosx']):
                 print(' ', line.strip())
     else:
         print('[ios_sed_fixes] fix14: AwtLibraries.gmk already patched or no matches')
