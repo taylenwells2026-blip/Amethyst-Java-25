@@ -108,6 +108,7 @@ POJAV_BUNDLE_DIR      ?= $(OUTPUTDIR)/AngelAuraAmethyst.app
 POJAV_JRE8_DIR        ?= $(SOURCEDIR)/depends/java-8-openjdk
 POJAV_JRE17_DIR       ?= $(SOURCEDIR)/depends/java-17-openjdk
 POJAV_JRE21_DIR       ?= $(SOURCEDIR)/depends/java-21-openjdk
+POJAV_JRE25_DIR       ?= $(SOURCEDIR)/depends/java-25-openjdk
 
 # Function to use later for checking dependencies
 METHOD_DEPCHECK   = $(shell $(1) >/dev/null 2>&1 && echo 1)
@@ -291,14 +292,22 @@ jre: native
 	$(call METHOD_JAVA_UNPACK,21,'https://crystall1ne.dev/cdn/amethyst-ios/jre21-ios-aarch64.zip'); \
 	if [ -f "$(ls jre*.tar.xz)" ]; then rm $(SOURCEDIR)/depends/jre*.tar.xz; fi; \
 	cd $(SOURCEDIR); \
+	if [ ! -f "$(SOURCEDIR)/depends/java-25-openjdk/release" ] || [ ! -f "$(SOURCEDIR)/depends/java-25-openjdk/lib/server/libjvm.dylib" ]; then \
+		curl -L --fail -o /tmp/jre25.tar.xz 'https://github.com/taylenwells2026-blip/Amethyst-Java-25/releases/download/Jre25-iOS-aarch64/jre25-ios-aarch64.tar.xz'; \
+		mkdir -p $(SOURCEDIR)/depends/java-25-openjdk; \
+		tar xf /tmp/jre25.tar.xz -C $(SOURCEDIR)/depends/java-25-openjdk; \
+		rm -f /tmp/jre25.tar.xz; \
+	fi; \
 	rm -rf $(SOURCEDIR)/depends/java-*-openjdk/{ASSEMBLY_EXCEPTION,bin,include,jre,legal,LICENSE,man,THIRD_PARTY_README,lib/{ct.sym,jspawnhelper,libjsig.dylib,src.zip,tools.jar}}; \
 	$(call METHOD_DIRCHECK,$(OUTPUTDIR)/java_runtimes); \
 	cp -R $(POJAV_JRE8_DIR) $(OUTPUTDIR)/java_runtimes; \
 	cp -R $(POJAV_JRE17_DIR) $(OUTPUTDIR)/java_runtimes; \
 	cp -R $(POJAV_JRE21_DIR) $(OUTPUTDIR)/java_runtimes; \
+	cp -R $(POJAV_JRE25_DIR) $(OUTPUTDIR)/java_runtimes; \
 	cp $(WORKINGDIR)/libawt_xawt.dylib $(OUTPUTDIR)/java_runtimes/java-8-openjdk/lib; \
 	cp $(WORKINGDIR)/libawt_xawt.dylib $(OUTPUTDIR)/java_runtimes/java-17-openjdk/lib;
 	cp $(WORKINGDIR)/libawt_xawt.dylib $(OUTPUTDIR)/java_runtimes/java-21-openjdk/lib
+	cp $(WORKINGDIR)/libawt_xawt.dylib $(OUTPUTDIR)/java_runtimes/java-25-openjdk/lib
 	echo '[Amethyst v$(VERSION)] jre - end'
 
 dep_mg:
@@ -429,6 +438,5 @@ clean:
 	rm -rf $(OUTPUTDIR)
 	echo '[Amethyst v$(VERSION)] clean - end'
 
-		
 
 .PHONY: all clean check native java jre package dsym deploy help
