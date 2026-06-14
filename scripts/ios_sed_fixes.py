@@ -495,3 +495,42 @@ if p.exists():
         print('[ios_sed_fixes] fix15: java.desktop/Lib.gmk already patched or no matches')
 else:
     print('[ios_sed_fixes] fix15: WARN java.desktop/Lib.gmk not found')
+
+
+# Fix 16: os_bsd.cpp - DeviceRequiresTXMWorkaround() calls opendir/readdir
+# which acquires a pthread mutex at address 0x40 that is unmapped on Darwin 27
+# during early JVM init (CodeCache::initialize). Replace with sysctlbyname
+# which is safe to call at any point during init.
+p = ROOT / 'src/hotspot/os/bsd/os_bsd.cpp'
+if p.exists():
+    s = p.read_text()
+    if 'sysctlbyname("hw.machine"' not in s and 'DeviceRequiresTXMWorkaround' in s:
+        original = s
+        # Find the function and replace its body regardless of exact whitespace
+        s2 = re.sub(
+            r'static bool DeviceRequiresTXMWorkaround\(\) \{[^}]*\}',
+            'static bool DeviceRequiresTXMWorkaround() {\n'
+            '  // readdir() crashes on Darwin 27 during early JVM init:\n'
+            '  // the pthread mutex it acquires at 0x40 is unmapped at this\n'
+            '  // point in CodeCache::initialize. Use sysctlbyname instead.\n'
+            '  char machine[64] = {};\n'
+            '  size_t len = sizeof(machine);\n'
+            '  if (sysctlbyname("hw.machine", machine, &len, nullptr, 0) != 0) {\n'
+            '    return false;\n'
+            '  }\n'
+            '  return strncmp(machine, "iPhone", 6) == 0;\n'
+            '}',
+            s,
+            flags=re.DOTALL
+        )
+        if s2 != s:
+            p.write_text(s2)
+            print('[ios_sed_fixes] fix16: patched DeviceRequiresTXMWorkaround in os_bsd.cpp')
+        else:
+            print('[ios_sed_fixes] fix16: WARN DeviceRequiresTXMWorkaround pattern not found')
+    elif 'sysctlbyname("hw.machine"' in s:
+        print('[ios_sed_fixes] fix16: os_bsd.cpp already patched')
+    else:
+        print('[ios_sed_fixes] fix16: DeviceRequiresTXMWorkaround not found in os_bsd.cpp')
+else:
+    print('[ios_sed_fixes] fix16: WARN os_bsd.cpp not found')
